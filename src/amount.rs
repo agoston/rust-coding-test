@@ -7,10 +7,9 @@ use std::ops::{Add, Mul, Sub};
 use crate::amount::Error::{Malformed, PrecisionTooHigh};
 
 /// fixed point precision with 4 fraction digits, to act as monetary type
-/// (the `decimal` crate is much less efficient qua memory and cpu)
 /// NB: only the operators +-* are implemented!
-/// NB: there is no overflow check, but limit is 2^49, well within practical limits
-#[derive(Debug)]
+/// NB: there is no overflow check, but limit is +-2^49, well within practical limits of monetary types
+#[derive(Debug, Clone, Copy, Default, Ord, PartialOrd, Eq, PartialEq)]
 pub struct Amount {
     amount_fx4: i64,
 }
