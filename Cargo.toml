@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 csv = "1.1.6"
+serde = { version = "1.0.140", features = ["derive"] }

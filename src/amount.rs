@@ -3,13 +3,14 @@ use std::fmt::Formatter;
 use std::num::ParseIntError;
 use std::str::FromStr;
 use std::ops::{Add, Mul, Sub};
+use serde::{Serialize,Deserialize};
 
 use crate::amount::Error::{Malformed, PrecisionTooHigh};
 
 /// fixed point precision with 4 fraction digits, to act as monetary type
 /// NB: only the operators +-* are implemented!
 /// NB: there is no overflow check, but limit is +-2^49, well within practical limits of monetary types
-#[derive(Debug, Clone, Copy, Default, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, Ord, PartialOrd, Eq, PartialEq, Deserialize, Serialize)]
 pub struct Amount {
     amount_fx4: i64,
 }
