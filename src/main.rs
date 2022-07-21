@@ -6,16 +6,14 @@ mod ledger;
 use std::env;
 use std::path::Path;
 use std::process::exit;
-use csv::{ReaderBuilder, StringRecord, Trim};
+use csv::{ReaderBuilder, Trim};
 use crate::amount::Amount;
-use crate::Error::Conversion;
 use crate::ledger::{Client, Ledger, Transaction, TransactionKind};
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug)]
 enum Error {
     Read(csv::Error),
-    Conversion,
 }
 
 impl From<csv::Error> for Error {

@@ -3,14 +3,15 @@ use std::fmt::Formatter;
 use std::num::ParseIntError;
 use std::str::FromStr;
 use std::ops::{Add, Mul, Sub};
-use serde::{Serialize,Deserialize};
+use serde::{Deserializer, de, Serializer};
+use serde::{Serialize, Deserialize};
 
 use crate::amount::Error::{Malformed, PrecisionTooHigh};
 
 /// fixed point precision with 4 fraction digits, to act as monetary type
 /// NB: only the operators +-* are implemented!
 /// NB: there is no overflow check, but limit is +-2^49, well within practical limits of monetary types
-#[derive(Debug, Clone, Copy, Default, Ord, PartialOrd, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, Default, Ord, PartialOrd, Eq, PartialEq)]
 pub struct Amount {
     amount_fx4: i64,
 }
@@ -50,6 +51,12 @@ pub enum Error {
     NoInput,
     Malformed,
     PrecisionTooHigh,
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(self, f)
+    }
 }
 
 impl From<ParseIntError> for Error {
@@ -97,6 +104,23 @@ impl fmt::Display for Amount {
             }
             write!(f, "{}.{:0width$}", whole, fraction)
         }
+    }
+}
+
+impl<'de> Deserialize<'de> for Amount {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'de>
+    {
+        let s = String::deserialize(deserializer)?;
+        FromStr::from_str(&s).map_err(de::Error::custom)
+    }
+}
+
+impl Serialize for Amount {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        serializer.collect_str(self)
     }
 }
 

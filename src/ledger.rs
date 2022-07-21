@@ -3,6 +3,7 @@ use crate::amount::Amount;
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum TransactionKind {
     Deposit,
     Withdrawal,
