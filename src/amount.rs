@@ -3,6 +3,7 @@ use std::fmt::Formatter;
 use std::num::ParseIntError;
 use std::str::FromStr;
 use std::ops::{Add, Mul, Sub};
+use lazy_static::lazy_static;
 use serde::{Deserializer, de, Serializer};
 use serde::{Serialize, Deserialize};
 
@@ -14,6 +15,10 @@ use crate::amount::Error::{Malformed, PrecisionTooHigh};
 #[derive(Debug, Clone, Copy, Default, Ord, PartialOrd, Eq, PartialEq)]
 pub struct Amount {
     amount_fx4: i64,
+}
+
+lazy_static! {
+    pub static ref ZERO: Amount = Amount::new(0, 0);
 }
 
 impl Amount {
@@ -91,7 +96,7 @@ impl FromStr for Amount {
 impl fmt::Display for Amount {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let whole = self.amount_fx4 / 10000;
-        let mut fraction = self.amount_fx4 % 10000;
+        let mut fraction = (self.amount_fx4 % 10000).abs();
 
         if fraction == 0 {
             write!(f, "{}", whole)
@@ -172,5 +177,21 @@ mod tests {
         let transaction = Amount::from_str("3").unwrap();
         let new_balance = balance * transaction;
         assert_eq!(new_balance.to_string(), "35.97");
+    }
+
+    #[test]
+    fn negative_add() {
+        let balance = Amount::from_str("11.99").unwrap();
+        let transaction = Amount::from_str("-30").unwrap();
+        let new_balance = balance + transaction;
+        assert_eq!(new_balance.to_string(), "-18.01");
+    }
+
+    #[test]
+    fn negative_sub() {
+        let balance = Amount::from_str("11.99").unwrap();
+        let transaction = Amount::from_str("-30").unwrap();
+        let new_balance = balance - transaction;
+        assert_eq!(new_balance.to_string(), "41.99");
     }
 }

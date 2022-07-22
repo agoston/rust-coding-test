@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::ops::Deref;
-use crate::amount::Amount;
+use crate::amount::{Amount, ZERO};
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -27,7 +27,7 @@ impl Transaction {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, Eq, PartialEq)]
 pub struct Client {
     id: u16,
     available: Amount,
@@ -111,9 +111,12 @@ impl Ledger {
     }
 
     pub fn mutate(&mut self, transaction: Transaction) {
+        // sanity check: transaction amount is not negative
+        if transaction.amount < *ZERO { return; }
+
         let old_client = match self.clients.get(&transaction.client_id) {
-            None => {Client::new(transaction.client_id)}
-            Some(x) => {x.clone()}
+            None => { Client::new(transaction.client_id) }
+            Some(x) => { x.clone() }
         };
 
         let new_client = match transaction.kind {
@@ -146,5 +149,46 @@ impl Ledger {
         if new_client.is_some() {
             self.clients.insert(transaction.client_id, new_client.unwrap());
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{Client, Ledger, Transaction, TransactionKind};
+
+    #[test]
+    fn single_deposit() {
+        let mut ledger = Ledger::new();
+        ledger.mutate(Transaction { id: 0, client_id: 0, kind: TransactionKind::Deposit, amount: "12.5".parse().unwrap() });
+        let mut iter = ledger.iter();
+        assert_eq!(iter.next().unwrap(), (&0u16, &Client { id: 0, available: "12.5".parse().unwrap(), held: "0".parse().unwrap(), locked: false }))
+    }
+
+    #[test]
+    fn multi_deposit() {
+        let mut ledger = Ledger::new();
+        ledger.mutate(Transaction { id: 0, client_id: 0, kind: TransactionKind::Deposit, amount: "12.5".parse().unwrap() });
+        ledger.mutate(Transaction { id: 1, client_id: 0, kind: TransactionKind::Deposit, amount: "7.5".parse().unwrap() });
+        let mut iter = ledger.iter();
+        assert_eq!(iter.next().unwrap(), (&0u16, &Client { id: 0, available: "20".parse().unwrap(), held: "0".parse().unwrap(), locked: false }))
+    }
+
+    #[test]
+    fn single_withdraw() {
+        let mut ledger = Ledger::new();
+        ledger.mutate(Transaction { id: 0, client_id: 0, kind: TransactionKind::Withdrawal, amount: "12.5".parse().unwrap() });
+        let mut iter = ledger.iter();
+        assert_eq!(iter.next().unwrap(), (&0u16, &Client { id: 0, available: "0".parse().unwrap(), held: "0".parse().unwrap(), locked: false }))
+    }
+
+    #[test]
+    fn multi_deposit_withdraw() {
+        let mut ledger = Ledger::new();
+        ledger.mutate(Transaction { id: 0, client_id: 0, kind: TransactionKind::Deposit, amount: "12.5".parse().unwrap() });
+        ledger.mutate(Transaction { id: 0, client_id: 0, kind: TransactionKind::Withdrawal, amount: "7.5".parse().unwrap() });
+        ledger.mutate(Transaction { id: 0, client_id: 0, kind: TransactionKind::Deposit, amount: "5".parse().unwrap() });
+        ledger.mutate(Transaction { id: 0, client_id: 0, kind: TransactionKind::Deposit, amount: "-5".parse().unwrap() });
+        let mut iter = ledger.iter();
+        assert_eq!(iter.next().unwrap(), (&0u16, &Client { id: 0, available: "10".parse().unwrap(), held: "0".parse().unwrap(), locked: false }))
     }
 }
