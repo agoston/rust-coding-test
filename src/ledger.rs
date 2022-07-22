@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::ops::Deref;
 use crate::amount::Amount;
 use serde::{Serialize, Deserialize};
 
@@ -96,12 +97,20 @@ pub struct Ledger {
     transactions: HashMap<u64, Transaction>,
 }
 
+impl Deref for Ledger {
+    type Target = HashMap<u16, Client>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.clients
+    }
+}
+
 impl Ledger {
     pub fn new() -> Self {
         Ledger { ..Default::default() }
     }
 
-    pub fn mutate(mut self, transaction: Transaction) {
+    pub fn mutate(&mut self, transaction: Transaction) {
         let old_client = match self.clients.get(&transaction.client_id) {
             None => {Client::new(transaction.client_id)}
             Some(x) => {x.clone()}
@@ -134,8 +143,8 @@ impl Ledger {
             }
         };
 
-        if new_client.is_none() { return; }
-
-        self.clients.insert(transaction.client_id, new_client.unwrap());
+        if new_client.is_some() {
+            self.clients.insert(transaction.client_id, new_client.unwrap());
+        }
     }
 }

@@ -3,7 +3,7 @@ extern crate core;
 mod amount;
 mod ledger;
 
-use std::env;
+use std::{env, io};
 use std::path::Path;
 use std::process::exit;
 use csv::{ReaderBuilder, Trim};
@@ -14,11 +14,18 @@ use serde::{Serialize, Deserialize};
 #[derive(Debug)]
 enum Error {
     Read(csv::Error),
+    Write(io::Error)
 }
 
 impl From<csv::Error> for Error {
-    fn from(csv_error: csv::Error) -> Self {
-        Error::Read(csv_error)
+    fn from(error: csv::Error) -> Self {
+        Error::Read(error)
+    }
+}
+
+impl From<io::Error> for Error {
+    fn from(error: io::Error) -> Self {
+        Error::Write(error)
     }
 }
 
@@ -64,12 +71,21 @@ fn run<P: AsRef<Path>>(path: P) -> Result<String, Error> {
         .flexible(true)
         .from_path(path)?;
 
-    let ledger = Ledger::new();
+    let mut ledger = Ledger::new();
 
     for result in reader.deserialize() {
         let transaction: ApiTransaction = result?;
         println!("{:?}", transaction);
+        ledger.mutate((&transaction).into());
     }
+
+    let mut wtr = csv::Writer::from_writer(io::stdout());
+    for x in ledger.iter() {
+        let client: ApiClient = x.1.into();
+        wtr.serialize(client)?;
+    }
+    wtr.flush()?;
+
     Ok("ok".to_string())
 }
 
@@ -81,8 +97,7 @@ fn main() {
     }
 
     match run(&args[1]) {
-        Ok(res) => {
-            println!("Got {}", res)
+        Ok(_res) => {
         }
         Err(err) => {
             println!("{:?}", err)
