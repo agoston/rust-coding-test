@@ -215,4 +215,10 @@ mod tests {
     pub fn chargeback() {
         assert_transaction("deposit, 1, 1, 10\ndispute, 1, 1, 2.5\nchargeback,1,1,2.5", "1,0,0,0,true");
     }
+
+    #[test]
+    pub fn locked_user() {
+        assert_transaction("deposit, 1, 1, 10\ndispute, 1, 1, 2.5\nchargeback,1,1,2.5\ndeposit,1,2,5", "1,0,0,0,true");
+    }
+
 }
