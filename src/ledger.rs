@@ -152,6 +152,7 @@ impl Ledger {
     }
 }
 
+// only basic test coverage here; it's a lot easier to test complex functionality end-to-end, from `main.rs`
 #[cfg(test)]
 mod tests {
     use crate::{Client, Ledger, Transaction, TransactionKind};
@@ -185,10 +186,26 @@ mod tests {
     fn multi_deposit_withdraw() {
         let mut ledger = Ledger::new();
         ledger.mutate(Transaction { id: 0, client_id: 0, kind: TransactionKind::Deposit, amount: "12.5".parse().unwrap() });
-        ledger.mutate(Transaction { id: 0, client_id: 0, kind: TransactionKind::Withdrawal, amount: "7.5".parse().unwrap() });
-        ledger.mutate(Transaction { id: 0, client_id: 0, kind: TransactionKind::Deposit, amount: "5".parse().unwrap() });
-        ledger.mutate(Transaction { id: 0, client_id: 0, kind: TransactionKind::Deposit, amount: "-5".parse().unwrap() });
+        ledger.mutate(Transaction { id: 1, client_id: 0, kind: TransactionKind::Withdrawal, amount: "7.5".parse().unwrap() });
+        ledger.mutate(Transaction { id: 2, client_id: 0, kind: TransactionKind::Deposit, amount: "5".parse().unwrap() });
+        ledger.mutate(Transaction { id: 3, client_id: 0, kind: TransactionKind::Deposit, amount: "-5".parse().unwrap() });
         let mut iter = ledger.iter();
         assert_eq!(iter.next().unwrap(), (&0u16, &Client { id: 0, available: "10".parse().unwrap(), held: "0".parse().unwrap(), locked: false }))
+    }
+
+    #[test]
+    fn multi_client() {
+        let mut ledger = Ledger::new();
+        ledger.mutate(Transaction { id: 0, client_id: 5, kind: TransactionKind::Deposit, amount: "5".parse().unwrap() });
+        ledger.mutate(Transaction { id: 1, client_id: 10, kind: TransactionKind::Withdrawal, amount: "10".parse().unwrap() });
+        ledger.mutate(Transaction { id: 2, client_id: 5, kind: TransactionKind::Withdrawal, amount: "2".parse().unwrap() });
+        ledger.mutate(Transaction { id: 3, client_id: 3, kind: TransactionKind::Deposit, amount: "3".parse().unwrap() });
+
+        let mut result: Vec<&Client> = ledger.iter().map(|e| e.1).collect();
+        result.sort_by(|a, b| a.id.cmp(&b.id));
+
+        assert_eq!(*result[0], Client { id: 3, available: "3".parse().unwrap(), held: "0".parse().unwrap(), locked: false });
+        assert_eq!(*result[1], Client { id: 5, available: "3".parse().unwrap(), held: "0".parse().unwrap(), locked: false });
+        assert_eq!(*result[2], Client { id: 10, available: "0".parse().unwrap(), held: "0".parse().unwrap(), locked: false });
     }
 }
