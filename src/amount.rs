@@ -1,11 +1,12 @@
 use std::fmt;
 use std::fmt::Formatter;
 use std::num::ParseIntError;
-use std::str::FromStr;
 use std::ops::{Add, Mul, Sub};
+use std::str::FromStr;
+
 use lazy_static::lazy_static;
-use serde::{Deserializer, de, Serializer};
-use serde::{Serialize, Deserialize};
+use serde::{de, Deserializer, Serializer};
+use serde::{Deserialize, Serialize};
 
 use crate::amount::Error::{Malformed, PrecisionTooHigh};
 
@@ -23,7 +24,11 @@ lazy_static! {
 
 impl Amount {
     fn new(whole: i64, fraction: u32) -> Amount {
-        Amount { amount_fx4: whole * 10000 + (fraction as i64) }
+        return if whole >= 0 {
+            Amount { amount_fx4: whole * 10000 + (fraction as i64) }
+        } else {
+            Amount { amount_fx4: whole * 10000 - (fraction as i64) }
+        }
     }
 }
 
@@ -132,6 +137,7 @@ impl Serialize for Amount {
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
+
     use crate::amount::Amount;
 
     #[test]
@@ -139,6 +145,10 @@ mod tests {
         let balance: Amount = "12.5".parse().unwrap();
         assert_eq!(balance.amount_fx4, 125000);
         assert_eq!(balance.to_string(), "12.5");
+
+        let neg_balance: Amount = "-12.5".parse().unwrap();
+        assert_eq!(neg_balance.amount_fx4, -125000);
+        assert_eq!(neg_balance.to_string(), "-12.5");
     }
 
     #[test]
@@ -146,6 +156,10 @@ mod tests {
         let balance: Amount = Amount::from_str("9.05").unwrap();
         assert_eq!(balance.amount_fx4, 90500);
         assert_eq!(balance.to_string(), "9.05");
+
+        let neg_balance: Amount = Amount::from_str("-9.05").unwrap();
+        assert_eq!(neg_balance.amount_fx4, -90500);
+        assert_eq!(neg_balance.to_string(), "-9.05");
     }
 
     #[test]
@@ -153,6 +167,10 @@ mod tests {
         let balance = Amount::new(24, 4321);
         assert_eq!(balance.amount_fx4, 244321);
         assert_eq!(balance.to_string(), "24.4321");
+
+        let neg_balance = Amount::new(-24, 4321);
+        assert_eq!(neg_balance.amount_fx4, -244321);
+        assert_eq!(neg_balance.to_string(), "-24.4321");
     }
 
     #[test]
