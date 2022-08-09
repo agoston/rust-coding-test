@@ -1,6 +1,5 @@
 use std::fmt;
 use std::fmt::Formatter;
-use std::num::ParseIntError;
 use std::ops::{Add, Mul, Sub};
 use std::str::FromStr;
 
@@ -28,7 +27,7 @@ impl Amount {
             Amount { amount_fx4: whole * 10000 + (fraction as i64) }
         } else {
             Amount { amount_fx4: whole * 10000 - (fraction as i64) }
-        }
+        };
     }
 }
 
@@ -59,8 +58,8 @@ impl Sub for Amount {
 #[derive(Debug)]
 pub enum Error {
     NoInput,
-    Malformed,
-    PrecisionTooHigh,
+    Malformed(String),
+    PrecisionTooHigh(String),
 }
 
 impl fmt::Display for Error {
@@ -69,18 +68,12 @@ impl fmt::Display for Error {
     }
 }
 
-impl From<ParseIntError> for Error {
-    fn from(_: ParseIntError) -> Self {
-        Malformed
-    }
-}
-
 impl FromStr for Amount {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut split_input = s.split('.');
-        let whole: i64 = split_input.next().ok_or(Error::NoInput)?.parse()?;
+        let whole: i64 = split_input.next().ok_or(Error::NoInput)?.parse().map_err(|_| { Malformed(s.to_string()) })?;
         let fraction_str_opt = split_input.next();
         if fraction_str_opt.is_none() {
             return Ok(Amount::new(whole, 0));
@@ -89,11 +82,11 @@ impl FromStr for Amount {
         let fraction_str = fraction_str_opt.unwrap();
         let fraction_len = fraction_str.len();
 
-        let parsed_fraction: u32 = fraction_str.parse()?;
+        let parsed_fraction: u32 = fraction_str.parse().map_err(|_| { Malformed(s.to_string()) })?;
         return match fraction_len {
-            0 => { Err(Malformed) }
+            0 => { Err(Malformed(s.to_string())) }
             1..=4 => { Ok(Amount::new(whole, parsed_fraction * 10_u32.pow((4 - fraction_len) as u32))) }
-            _ => { Err(PrecisionTooHigh) }
+            _ => { Err(PrecisionTooHigh(s.to_string())) }
         };
     }
 }

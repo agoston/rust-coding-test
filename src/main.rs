@@ -18,7 +18,7 @@ mod ledger;
 enum Error {
     Read(csv::Error),
     Write(io::Error),
-    Parse(&'static str),
+    Parse(String),
 }
 
 impl From<csv::Error> for Error {
@@ -36,19 +36,19 @@ impl From<io::Error> for Error {
 // FIXME: propagate error details from these 3 different error types
 impl From<TransactionKindConversionError> for Error {
     fn from(_error: TransactionKindConversionError) -> Self {
-        Error::Parse("enum does not exist")
+        Error::Parse("enum does not exist".to_string())
     }
 }
 
 impl From<ParseIntError> for Error {
     fn from(_error: ParseIntError) -> Self {
-        Error::Parse("int conversion failed")
+        Error::Parse("int conversion failed".to_string())
     }
 }
 
 impl From<amount::Error> for Error {
-    fn from(_error: amount::Error) -> Self {
-        Error::Parse("amount conversion failed")
+    fn from(error: amount::Error) -> Self {
+        Error::Parse(format!("amount conversion failed: {:?}", error))
     }
 }
 
@@ -111,9 +111,9 @@ fn process_transactions<R: io::Read, W: io::Write>(reader: &mut Reader<R>, wtr: 
     for result in reader.records() {
         let record = result?;
         let transaction = ApiTransaction {
-            kind: record.get(0).ok_or(Error::Parse("kind missing"))?.parse()?,
-            client: record.get(1).ok_or(Error::Parse("client missing"))?.parse()?,
-            tx: record.get(2).ok_or(Error::Parse("tx missing"))?.parse()?,
+            kind: record.get(0).ok_or(Error::Parse("kind missing".to_string()))?.parse()?,
+            client: record.get(1).ok_or(Error::Parse("client missing".to_string()))?.parse()?,
+            tx: record.get(2).ok_or(Error::Parse("tx missing".to_string()))?.parse()?,
             amount: record.get(3).unwrap_or("0").parse()?,
         };
 
